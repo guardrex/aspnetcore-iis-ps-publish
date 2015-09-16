@@ -14,7 +14,7 @@ The script only works with .NET 5 projects that have a single runtime and a sing
 
 Because the script goes by version numbers when deciding if a package should be replaced on the server, make sure you change your application version if you want the scrpt to upload your application changes.
 ### Configuration
-Provide the path to the output folder of your project (i.e., the path to the folder where you published your project, which is the folder that contains your approot and wwwroot folders).
+Provide the path to the output folder of your project (i.e., the path to the folder where you published your project, which is the folder that contains your `approot` and `wwwroot` folders).
 ```
 $sourcePathToOutput = '<PATH_TO_LOCAL_PUBLISH_FOLDER>'
 ```
@@ -26,9 +26,13 @@ $servers = @(
     ('<CLOUD_SERVICE>.cloudapp.net',55002,'<ADMIN_USERNAME>','<IIS_WEBSITE_NAME>','<PATH_TO_WEBSITE_FOLDER>')
 )
 ```
-The sample (and the script itself) demonstrates using Azure Cloud Services and Azure VM's, but the script should work just as well on-prem. Change the address of the server to the server's IP address. Indicate the server's port where PowerShell is listening (if you don't port map it away, it's typically 5986 for SSL). For the Azure case, note that these ports have been mapped in the Azure portal for these VM's: e.g., 55001 -> 5986. Each server at a Cloud Service address (mycloudserver.cloudapp.net) must have a single, dedicated endpoint setup this way in the Azure portal. Make sure that the path to the website folder in the script array is to the folder that holds the `approot` and `wwwroot` folders on the server. In IIS with .NET 5, you bind the website directly to the `wwwroot` folder.
+The sample (and the script itself) demonstrates using Azure Cloud Services and Azure VM's, but the script should work just as well on-prem. Change the address of the server to the server's IP address. Indicate the server's port where PowerShell is listening (if you don't port map it away, it's typically 5986 for SSL).
 
-**Example:**
+In the Azure scenario, note that these ports have been mapped in the Azure portal for these VM's: e.g., 55001 -> 5986. Each server at a Cloud Service address (mycloudserver.cloudapp.net) must have a single, dedicated endpoint setup this way in the Azure portal.
+
+Make sure that the path to the website folder in the script array is to the folder that holds the `approot` and `wwwroot` folders on the server. In IIS with .NET 5, you bind the website directly to the `wwwroot` folder.
+
+##### Example
 Say we have two Azure Cloud Services (myeastusservice.cloudapp.net and mywestusservice.cloudapp.net), each with two VM's. Each of the two VM's have had a dedicated port mapped to 5986 for SSL PowerShell. The web application has the same name on each VM, and the physical path is pointed to a data drive (F:) in the same name. This is how the array should be setup for this example:
 ```
 $servers = @(
