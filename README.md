@@ -44,19 +44,19 @@ $servers = @(
 )
 ```
 ### Processing
-1. Create a manifest of the project's wwwroot folder
+1. Create a manifest of the project's `wwwroot` folder
 2. Create a manifest of the project's packages
 3. Update the application on each Azure VM
   1. Take credentials for the server and establish a PowerShell session
   2. Establish a deployment folder for the deployment on the server and determine if the runtime is correct
-  3. Check wwwroot items on the server by hash comparison and send up any wwwroot items from the local project to the deployment folder
+  3. Check `wwwroot` items on the server by hash comparison and send up any `wwwroot` items from the local project to the deployment folder
   4. Check packages on the server by package version and send up any packages from the local project to the deployment folder
-  5. Move the global.json from the local project to the server (if it exists)
+  5. Move the `global.json` from the local project to the server (if it exists)
   6. Deploy the payload on the server from the deployment folder to the application folder
     1. Stop the AppPool (to prevent file locks)
-    2. Copy wwwroot items (if needed)
+    2. Copy `wwwroot` items (if needed)
     3. Replace the runtime (if needed)
-    4. Move the global.json file (if needed)
+    4. Move the `global.json` file (if needed)
     5. Update packages (if needed)
     6. Restart the AppPool
   7. Disconnect and remove the PowerShell session to the server
