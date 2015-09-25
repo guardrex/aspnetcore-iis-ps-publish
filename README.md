@@ -29,12 +29,12 @@ $servers = @(
 ```
 The sample (and the script itself) demonstrates using Azure Cloud Services and Azure VM's, but the script should work just as well on-prem. Change the address of the server to the server's IP address. Indicate the server's port where PowerShell is listening. If you don't port map it away, it's typically 5986 for SSL.
 
-In the Azure scenario, note that these ports have been mapped in the Azure portal for these VM's: e.g., 55001 -> 5986. Each server under a Cloud Service endpoint (mycloudserver.cloudapp.net) must have a single, dedicated endpoint setup this way in the Azure portal.
+In the Azure scenario, note that these ports have been mapped in the Azure portal for these VM's: e.g., 55000 -> 5986, 55001 -> 5986, 55002 -> 5986. Each server under a Cloud Service endpoint (mycloudservice.cloudapp.net) must have a single, dedicated endpoint setup this way in the Azure portal.
 
-Make sure that the path to the website folder in the script array is to the folder that holds the `approot` and `wwwroot` folders on the server. Recall that binding a website to a .NET 5 app's phycial holder in IIS is different: In IIS, you bind the website directly to the `wwwroot` folder. The folder that the script needs is the folder **above** the `wwwroot` folder.
+Make sure that the path to the website folder in the script array is to the folder that holds the `approot` and `wwwroot` folders on the server. Recall that binding a website to a .NET 5 app's phycial folder in IIS is different: In IIS, you bind the website directly to the `wwwroot` folder. The folder that the script needs is the folder **above** the `wwwroot` folder.
 
 ##### Example
-Say we have two Azure Cloud Services (myeastusservice.cloudapp.net and mywestusservice.cloudapp.net), each with two VM's. Each of the two VM's have had a dedicated port mapped to 5986 for SSL PowerShell. The web application has the same name on each VM, and the physical path is pointed to a data drive (F:) in the same name. This is how the array should be setup for this example:
+Say we have two Azure Cloud Services (myeastusservice.cloudapp.net and mywestusservice.cloudapp.net), each with two VM's. Each of the two VM's have had a dedicated port mapped to 5986 for SSL PowerShell. The web application has the same name on each VM, and the physical path is pointed to a data drive (F:) in the same location. This is how the array should be setup for this example:
 ```
 $servers = @(
     ('myeastusservice.cloudapp.net',50000,'adminuser','corporate_public','F:\corporate_public'),
