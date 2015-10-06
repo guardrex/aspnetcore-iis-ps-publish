@@ -219,13 +219,20 @@ $doc_approot_packages = New-Object -TypeName XML
 $doc_approot_packages.CreateXmlDeclaration("1.0", $null, $null) | Out-Null
 $rootNode = $doc_approot_packages.CreateElement("manifest");
 Get-ChildItem -Path $sourcePathToOutputPackages | ForEach-Object -Process {
-    $itemNode = $doc_approot_packages.CreateElement("data");
-    $itemNode.SetAttribute("path", $_.FullName)
-    $itemNode.SetAttribute("baseName", $_.BaseName)
-    $version = (Get-ChildItem -Path $_.FullName)[0]
-    $itemNode.SetAttribute("version", $version.BaseName)
-    $itemNode.SetAttribute("isDirectory", ($_.Attributes -eq "Directory"))
-    $rootNode.AppendChild($itemNode) | Out-Null;
+    Try
+    {
+        $itemNode = $doc_approot_packages.CreateElement("data");
+        $itemNode.SetAttribute("path", $_.FullName)
+        $itemNode.SetAttribute("baseName", $_.BaseName)
+        $version = (Get-ChildItem -Path $_.FullName)[0]
+        $itemNode.SetAttribute("version", $version.BaseName)
+        $itemNode.SetAttribute("isDirectory", ($_.Attributes -eq "Directory"))
+        $rootNode.AppendChild($itemNode) | Out-Null;
+    }
+    Catch [system.exception]
+    {
+        Write-host Failure to find version: $_.FullName $_.BaseName $_.Attributes
+    }
 }
 $doc_approot_packages.AppendChild($rootNode) | Out-Null;
 Write-Host OK
