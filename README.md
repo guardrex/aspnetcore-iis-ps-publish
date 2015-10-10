@@ -3,8 +3,8 @@ Experimental script for publishing .NET 5 projects to one or more IIS servers.
 ## WARNING!
 This script is highly **EXPERIMENTAL!** Do not use with any application publishing in a production environment. Use at your own risk.
 ### Requirements
-- Powershell 5 http://www.microsoft.com/en-us/download/details.aspx?id=48729
-- Powershell Community Extensions (PSCX) https://pscx.codeplex.com/
+- PowerShell 5 http://www.microsoft.com/en-us/download/details.aspx?id=48729
+- PowerShell Community Extensions (PSCX) https://pscx.codeplex.com/
 
 ### Notes
 The chunking algorithm for sending large files in a PSSession is adapted from "Send-File" from the Windows PowerShell Cookbook ISBN: 1449320686 (O'Reilly) by Lee Holmes (http://www.leeholmes.com/guide) Code: http://poshcode.org/2216
