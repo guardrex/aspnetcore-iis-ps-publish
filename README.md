@@ -13,7 +13,9 @@ For Azure Cloud Services, make sure the certificate for your cloud service is in
 
 The script only works with .NET 5 projects that have a single runtime and a single package version of each package.
 
-Because the script goes by version numbers when deciding if a package should be replaced on the server, make sure you change your application version if you want the scrpt to upload your application changes.
+Because the script goes by version numbers when deciding if a package should be replaced on the server, make sure you change your application version if you want the script to upload your application changes. You can include my https://github.com/GuardRex/net5-autoupdate-version piece in your app, which will do this for you automatically when you publish.
+
+The script only moves web.cmd and web files. It doesn't move any other commands you have setup. This is because web.cmd is required for HttpPlatformHandler-Kestrel. You can modify the script easily if you have other commmand files to move.
 ### Configuration
 Provide the path to the output folder of your project. This is the path to the folder where you published your project, which is the folder that contains your `approot` and `wwwroot` folders.
 ```
@@ -52,11 +54,12 @@ $servers = @(
   3. Check `wwwroot` items on the server by hash comparison and send up any `wwwroot` items from the local project to the deployment folder
   4. Check packages on the server by package version and send up any packages from the local project to the deployment folder
   5. Move the `global.json` from the local project to the server (if it exists)
-  6. Deploy the payload on the server from the deployment folder to the application folder
+  6. Move the `web.cmd` and `web` files from the local project to the server (if they exist)
+  7. Deploy the payload on the server from the deployment folder to the application folder
     1. Stop the AppPool (to prevent file locks)
     2. Copy `wwwroot` items (if needed)
     3. Replace the runtime (if needed)
     4. Move the `global.json` file (if needed)
     5. Update packages (if needed)
     6. Restart the AppPool
-  7. Disconnect and remove the PowerShell session to the server
+  8. Disconnect and remove the PowerShell session to the server

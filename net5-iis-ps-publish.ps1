@@ -387,12 +387,25 @@ foreach($server in $servers) {
         Write-Host
         ###################################
         #                                 #
+        # Deal with web.cmd and web       #
+        #                                 #
+        ###################################
+        $moveWebCommand = $false
+        if (Test-Path $sourcePathToOutputApproot\web.cmd) {
+            CompressSendFile -Source $sourcePathToOutputApproot\web.cmd -BaseName "web" -Extension ".cmd" -DeploymentFolder \ -Session $Session -SourcePathToOutputSubfolder $sourcePathToOutputApproot
+            CompressSendFile -Source $sourcePathToOutputApproot\web -BaseName "web" -Extension "" -DeploymentFolder \ -Session $Session -SourcePathToOutputSubfolder $sourcePathToOutputApproot
+            $moveWebCommand = $true
+            Write-Host OK
+        }
+        Write-Host
+        ###################################
+        #                                 #
         # Deploy the payload              #
         #                                 #
         ###################################
         Write-Host Deploy the new payload
         Invoke-Command -Session $Session -ScriptBlock {
-            param($doc_wwwroot2,$sourcePathToOutputWwwroot,$websiteName,$destinationPathToOutput,$replaceRuntime,$moveGlobalJsonFile,$updateWwwrootItems,$updatepackages,$doc_approot_packages2,$sourcePathToOutputApproot)
+            param($doc_wwwroot2,$sourcePathToOutputWwwroot,$websiteName,$destinationPathToOutput,$replaceRuntime,$moveGlobalJsonFile,$updateWwwrootItems,$updatepackages,$doc_approot_packages2,$sourcePathToOutputApproot,$moveWebCommand)
             # Stop the AppPool
             if((Get-WebAppPoolState $websiteName).Value -ne 'Stopped') {
                 Stop-WebAppPool -Name $websiteName
@@ -428,6 +441,12 @@ foreach($server in $servers) {
                 Copy-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment\global.json -Destination $destinationPathToOutput\approot -Force
                 Write-Host `-Copied global.json into approot
             }
+            # web.cmd and web
+            if ($moveWebCommand) {
+                Copy-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment\web.cmd -Destination $destinationPathToOutput\approot -Force
+                Copy-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment\web -Destination $destinationPathToOutput\approot -Force
+                Write-Host `-Copied web.cmd and web into approot
+            }
             # Packages
             if ($updatepackages) {
                 if (!(Test-Path $destinationPathToOutput\approot\packages)) {
@@ -451,7 +470,7 @@ foreach($server in $servers) {
                 }
                 Write-Host `-AppPool Started
             }
-        } -ArgumentList $doc_wwwroot2,$sourcePathToOutputWwwroot,$websiteName,$destinationPathToOutput,$replaceRuntime,$moveGlobalJsonFile,$updateWwwrootItems,$updatepackages,$doc_approot_packages2,$sourcePathToOutputApproot
+        } -ArgumentList $doc_wwwroot2,$sourcePathToOutputWwwroot,$websiteName,$destinationPathToOutput,$replaceRuntime,$moveGlobalJsonFile,$updateWwwrootItems,$updatepackages,$doc_approot_packages2,$sourcePathToOutputApproot,$moveWebCommand
         Write-Host OK
         Write-Host
         Write-Host Disconnecting and removing session
