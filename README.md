@@ -6,7 +6,7 @@ This script is highly **EXPERIMENTAL!** Do not use with any application publishi
 - PowerShell 5 http://www.microsoft.com/en-us/download/details.aspx?id=48729
 - PowerShell Community Extensions (PSCX) https://pscx.codeplex.com/
 
-Note: Make sure you get the right correct PS 5 installer for the server. See the Install Instructions section at: https://www.microsoft.com/en-us/download/details.aspx?id=45883
+The installer for WS2012R2 is Win8.1AndW2K12R2-KB3066437-x64.msu.
 
 ### Notes
 The chunking algorithm for sending large files in a PSSession is adapted from "Send-File" from the Windows PowerShell Cookbook ISBN: 1449320686 (O'Reilly) by Lee Holmes (http://www.leeholmes.com/guide) Code: http://poshcode.org/2216
