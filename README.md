@@ -1,5 +1,9 @@
 # net5-iis-ps-publish
 Experimental script for publishing .NET 5 projects to one or more IIS servers.
+
+### Note pending release of `dotnet cli`
+`dotnet cli` publishing will radically alter the published output from what we currently get with DNX. The file and folder layout will be much flatter. I will revise this script as soon as I have `dotnet cli` working.
+
 ## WARNING!
 This script is highly **EXPERIMENTAL!** Do not use with any application publishing in a production environment. Use at your own risk.
 ### Requirements
