@@ -1,5 +1,5 @@
-# net5-iis-ps-publish
-Experimental script for publishing .NET 5 projects to one or more IIS servers.
+# netcore-iis-ps-publish
+Experimental script for publishing ASP.NET Core projects to one or more IIS servers.
 
 ### Updated for `dotnet cli`!!!
 Yes! `dotnet cli` publishing, based on a flat output structure, is radically different from what we had with DNX. This script has been updated to work with `dotnet cli` projects.
@@ -33,7 +33,7 @@ The sample (and the script itself) demonstrates using Azure Cloud Services and A
 
 In the Azure scenario, note that these ports have been mapped in the Azure portal for these VM's: e.g., 55000 -> 5986, 55001 -> 5986, 55002 -> 5986. Each server under a Cloud Service endpoint (mycloudservice.cloudapp.net) must have a single, dedicated endpoint setup this way in the Azure portal.
 
-Make sure that the path to the website folder in the script array is to the folder that holds the `wwwroot` folder on the server. Recall that binding a website to a .NET 5 app's phycial folder in IIS is different: In IIS, you bind the website directly to the `wwwroot` folder. The folder that the script needs is the folder **above** the `wwwroot` folder.
+Make sure that the path to the website folder in the script array is to the folder that holds the `wwwroot` folder on the server. Recall that binding a website to a ASP.NET Core app's phycial folder in IIS is different: In IIS, you bind the website directly to the `wwwroot` folder. The folder that the script needs is the folder **above** the `wwwroot` folder.
 
 ##### Example
 Say we have two Azure Cloud Services (myeastusservice.cloudapp.net and mywestusservice.cloudapp.net), each with two VM's. Each of the two VM's have had a dedicated port mapped to 5986 for SSL PowerShell. The web application has the same name on each VM, and the physical path is pointed to a data drive (F:) in the same location. This is how the array should be setup for this example:

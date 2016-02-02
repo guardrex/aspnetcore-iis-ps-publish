@@ -1,8 +1,8 @@
 ﻿<#
 #
-# net5-iis-ps-publish
+# aspnetcore-iis-ps-publish
 #
-# Experimental prototype for using Powershell to publish an ASP.NET 5 project to an IIS web server
+# Experimental prototype for using Powershell to publish an ASP.NET Core project to an IIS web server
 #
 # Requirements:
 #
