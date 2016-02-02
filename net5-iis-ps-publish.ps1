@@ -2,7 +2,7 @@
 #
 # net5-iis-ps-publish
 #
-# Experimental prototype for using Powershell to publish an ASP.NET 5 project to IIS
+# Experimental prototype for using Powershell to publish an ASP.NET 5 project to an IIS web server
 #
 # Requirements:
 #
@@ -13,8 +13,8 @@
 #   https://pscx.codeplex.com/
 #
 #   ! WARNING !
-#   This script is highly EXPERIMENTAL! Do not use with any application publishing
-#   in a production environment. Use at your own risk.
+#   This script is highly EXPERIMENTAL! Do not use with application publishing
+#   in a production environment without serious testing. Use at your own risk.
 #
 # The chunking algorithm for sending large files in a PSSession is from "Send-File"
 # from the Windows PowerShell Cookbook ISBN: 1449320686 (O'Reilly) by Lee Holmes 
@@ -24,12 +24,13 @@
 # See: http://techthoughts.info/remote-powershell-to-azure-vm-automating-certificate-configuration/
 #>
 
-# Provide the path to your local project output folder. This is the folder that contains the approot and wwwroot
-$sourcePathToOutput = 'C:\...<path to output folder of project>...\output'
+# Provide the path to your local project output folder. This is the folder that contains the payload to move
+# e.g., C:\My_Cool_Project\My_Project_Assets_Folder\bin\Release\dnxcore50\win7-x64
+$sourcePathToOutput = '<path to output folder of project to the platform and runtime>'
 
 # Provide servers: The Cloud Service endpoint, the server's port at that endpoint, the admin username, 
-# the IIS website name on that server, the path to the website (the folder on the server that will contain 
-# the approot and wwwroot folders)
+# the IIS website AppPool name on that server, the path to the website (the folder on the server that will contain 
+# the payload of the application)
 $servers = @(
     ('myeastusservice.cloudapp.net',50000,'adminuser','corporate_public','F:\corporate_public'),
     ('myeastusservice.cloudapp.net',50001,'adminuser','corporate_public','F:\corporate_public'),
@@ -172,9 +173,6 @@ function CompressSendFile {
     Remove-Item $env:USERPROFILE\AppData\Local\Temp\deployment\compressed_temp.zip -Force
 }
 
-$sourcePathToOutputWwwroot = $sourcePathToOutput + '\wwwroot'
-$sourcePathToOutputApproot = $sourcePathToOutput + '\approot'
-$sourcePathToOutputPackages = $sourcePathToOutput + '\approot\packages'
 # Create local folders
 Write-Host
 Write-Host Creating local folders
@@ -183,18 +181,19 @@ if (Test-Path $env:USERPROFILE\AppData\Local\Temp\deployment) {
 }
 New-Item $env:USERPROFILE\AppData\Local\Temp\deployment -type directory -Force | Out-Null
 Write-Host OK
-###################################
-#                                 #
-# Create XML manifest of wwwroot  #
-#                                 #
-###################################
+
+##############################################
+#                                            #
+# Create XML manifest of the payload folder  #
+#                                            #
+##############################################
 Write-Host 
-Write-Host Creating local manifest of wwwroot
-$doc_wwwroot = New-Object -TypeName XML
-$doc_wwwroot.CreateXmlDeclaration("1.0", $null, $null) | Out-Null
-$rootNode = $doc_wwwroot.CreateElement("manifest");
-Get-ChildItem -Path $sourcePathToOutputWwwroot -Recurse | ForEach-Object -Process {
-    $itemNode = $doc_wwwroot.CreateElement("data");
+Write-Host Creating local manifest of payload
+$doc_payload = New-Object -TypeName XML
+$doc_payload.CreateXmlDeclaration("1.0", $null, $null) | Out-Null
+$rootNode = $doc_payload.CreateElement("manifest");
+Get-ChildItem -Path $sourcePathToOutput -Recurse | ForEach-Object -Process {
+    $itemNode = $doc_payload.CreateElement("data");
     $itemNode.SetAttribute("path", $_.FullName)
     $itemNode.SetAttribute("baseName", $_.BaseName)
     $itemNode.SetAttribute("ext", $_.Extension)
@@ -206,36 +205,9 @@ Get-ChildItem -Path $sourcePathToOutputWwwroot -Recurse | ForEach-Object -Proces
     }
     $rootNode.AppendChild($itemNode) | Out-Null;
 }
-$doc_wwwroot.AppendChild($rootNode) | Out-Null;
+$doc_payload.AppendChild($rootNode) | Out-Null;
 Write-Host OK
-###################################
-#                                 #
-# Create XML manifest of packages #
-#                                 #
-###################################
-Write-Host 
-Write-Host Creating local manifest of approot/packages
-$doc_approot_packages = New-Object -TypeName XML
-$doc_approot_packages.CreateXmlDeclaration("1.0", $null, $null) | Out-Null
-$rootNode = $doc_approot_packages.CreateElement("manifest");
-Get-ChildItem -Path $sourcePathToOutputPackages | ForEach-Object -Process {
-    Try
-    {
-        $itemNode = $doc_approot_packages.CreateElement("data");
-        $itemNode.SetAttribute("path", $_.FullName)
-        $itemNode.SetAttribute("baseName", $_.BaseName)
-        $version = (Get-ChildItem -Path $_.FullName)[0]
-        $itemNode.SetAttribute("version", $version.BaseName)
-        $itemNode.SetAttribute("isDirectory", ($_.Attributes -eq "Directory"))
-        $rootNode.AppendChild($itemNode) | Out-Null;
-    }
-    Catch [system.exception]
-    {
-        Write-host Failure to find version: $_.FullName $_.BaseName $_.Attributes
-    }
-}
-$doc_approot_packages.AppendChild($rootNode) | Out-Null;
-Write-Host OK
+
 ###################################
 #                                 #
 # Run the server array            #
@@ -246,11 +218,11 @@ foreach($server in $servers) {
     $cloudService = $server[0]
     $port = $server[1]
     $serverUsername = $server[2]
-    $websiteName = $server[3]
+    $webAppPoolName = $server[3]
     $destinationPathToOutput = $server[4]
+    $pw = Read-Host -Prompt "Input the password for user '$serverUsername' on server at ${cloudService}:${port}"
     Write-Host
     Write-Host Generating session for $server[0] : $server[1]
-    $pw = Read-Host -Prompt "Input the password for user '$serverUsername' on server at ${cloudService}:${port}"
     $secpasswd = ConvertTo-SecureString $pw -AsPlainText -Force
     $mycreds = New-Object System.Management.Automation.PSCredential ($serverUsername, $secpasswd)
     $Session = New-PSSession -ComputerName $cloudService -Port $port -Credential $mycreds -UseSSL -SessionOption (New-PSSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck)
@@ -260,49 +232,24 @@ foreach($server in $servers) {
     } else {
         Write-Host OK
         Write-Host
-        Write-Host Checking runtime and moving if needed
-        $runtime = (Get-ChildItem -Path $sourcePathToOutputApproot\runtimes)[0]
-        $replaceRuntime = Invoke-Command -Session $Session -ScriptBlock {
-            param($runtime,$destinationPathToOutput)
-            # Create folders
-            if (Test-Path $env:USERPROFILE\AppData\Local\Temp\deployment) {
-                Remove-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment -Force -Recurse | Out-Null
-            }
-            New-Item $env:USERPROFILE\AppData\Local\Temp\deployment -type directory -Force | Out-Null
-            New-Item $env:USERPROFILE\AppData\Local\Temp\deployment\runtimes -type directory -Force | Out-Null
-            New-Item $env:USERPROFILE\AppData\Local\Temp\deployment\packages -type directory -Force | Out-Null
-            New-Item $env:USERPROFILE\AppData\Local\Temp\deployment\wwwroot_source -type directory -Force | Out-Null
-            # Check the runtime
-            if (!(Test-Path $destinationPathToOutput\approot\runtimes\$runtime)) {
-                New-Item $env:USERPROFILE\AppData\Local\Temp\deployment\runtimes\$runtime -type directory -Force | Out-Null
-                Return $true
-            } else {
-                Return $false
-            }
-        } -ArgumentList $runtime,$destinationPathToOutput
-        if ($replaceRuntime) {
-            CompressSendFolder -Source $sourcePathToOutputApproot\runtimes\$runtime -Session $Session -SourcePathToOutputSubfolder $sourcePathToOutputApproot
-        }
-        Write-Host OK
+
         ###################################
         #                                 #
-        # Deal with wwwroot items         #
+        # Deal with payload items         #
         #                                 #
         ###################################
-        Write-Host
-        Write-Host Creating server folders and determing wwwroot files needed
-        [string]$doc_wwwroot_Str = Invoke-Command -Session $Session -ScriptBlock {
-            param($doc_wwwroot,$sourcePathToOutputWwwroot,$destinationPathToOutput)
-            Foreach ($item in (Select-XML -Xml $doc_wwwroot -XPath '//data')) {
-                $path = $item.Node.path.SubString($sourcePathToOutputWwwroot.Length)
+        Write-Host Creating server folders and determing payload files needed
+        [string]$doc_payload_Str = Invoke-Command -Session $Session -ScriptBlock {
+            param($doc_payload,$sourcePathToOutput,$destinationPathToOutput)
+            Foreach ($item in (Select-XML -Xml $doc_payload -XPath '//data')) {
+                $path = $item.Node.path.SubString($sourcePathToOutput.Length)
                 if ($item.Node.isDirectory -eq "True") {
                     Write-Host Adding folder $path
-                    New-Item $env:USERPROFILE\AppData\Local\Temp\deployment\wwwroot_source$path -type directory -Force | Out-Null
-                    $item.Node.ParentNode.RemoveChild($item.Node)
+                    New-Item $env:USERPROFILE\AppData\Local\Temp\deployment\payload_source$path -type directory -Force | Out-Null
                 } else {
-                    if (Test-Path $destinationPathToOutput\wwwroot$path) {
-                        if ($item.Node.hash -eq (Get-FileHash $destinationPathToOutput\wwwroot$path -Algorithm MD5).hash) {
-                            # Write-Host File exists on server and hash matches source: Removing this node from the wwwroot manifest
+                    if (Test-Path $destinationPathToOutput$path) {
+                        if ($item.Node.hash -eq (Get-FileHash $destinationPathToOutput$path -Algorithm MD5).hash) {
+                            # Write-Host File exists on server and hash matches source: Removing this node from the payload manifest
                             $item.Node.ParentNode.RemoveChild($item.Node)
                         } else {
                             # Write-Host File exists on server but does not match source: Leaving node for $path
@@ -312,166 +259,72 @@ foreach($server in $servers) {
                     }
                 }
             }
-            Return $doc_wwwroot.OuterXml
-        } -ArgumentList $doc_wwwroot,$sourcePathToOutputWwwroot,$destinationPathToOutput
-        $doc_wwwroot2 = New-Object -TypeName XML
-        $doc_wwwroot2.LoadXml('<?xml version="1.0"?>' + $doc_wwwroot_Str.Substring($doc_wwwroot_Str.IndexOf('<')))
+            Return $doc_payload.OuterXml
+        } -ArgumentList $doc_payload,$sourcePathToOutput,$destinationPathToOutput
+        $doc_payload2 = New-Object -TypeName XML
+        $doc_payload2.LoadXml('<?xml version="1.0"?>' + $doc_payload_Str.Substring($doc_payload_Str.IndexOf('<')))
         Write-Host OK
         Write-Host
-        Write-Host Using wwwroot manifest copying files for archive
+        Write-Host Using payload manifest copying files for archive
         $counter = 0
-        Foreach ($item in (Select-XML -Xml $doc_wwwroot2 -XPath '//data')) {
-            $path = $item.Node.path.SubString($sourcePathToOutputWwwroot.Length)
+        Foreach ($item in (Select-XML -Xml $doc_payload2 -XPath '//data')) {
+            $path = $item.Node.path.SubString($sourcePathToOutput.Length)
             if ($item.Node.isDirectory -ne "True") {
-                CompressSendFile -Source $sourcePathToOutputWwwroot$path -BaseName $item.Node.baseName -Extension $item.Node.ext -DeploymentFolder \wwwroot_source -Session $Session -SourcePathToOutputSubfolder $sourcePathToOutputWwwroot
+                CompressSendFile -Source $sourcePathToOutput$path -BaseName $item.Node.baseName -Extension $item.Node.ext -DeploymentFolder \payload_source -Session $Session -SourcePathToOutputSubfolder $sourcePathToOutput
                 $counter += 1
             }
         }
         if ($counter -gt 0) {
-            $updateWwwrootItems = $true
+            $updatePayloadItems = $true
         } else {
-            $updateWwwrootItems = $false
+            $updatePayloadItems = $false
         }
         Write-Host OK
-        ###################################
-        #                                 #
-        # Deal with packages              #
-        #                                 #
-        ###################################
-        Write-Host
-        Write-Host Creating server folders and determing packages needed
-        [string]$doc_approot_packages_Str = Invoke-Command -Session $Session -ScriptBlock {
-            param($doc_approot_packages,$sourcePathToOutputPackages,$destinationPathToOutput)
-            Foreach ($item in (Select-XML -Xml $doc_approot_packages -XPath '//data')) {
-                $path = $item.Node.path.SubString($sourcePathToOutputPackages.Length)
-                if (!(Test-Path $destinationPathToOutput\approot\packages$path)) {
-                    New-Item $env:USERPROFILE\AppData\Local\Temp\deployment\packages$path -type directory -Force | Out-Null
-                } else {
-                    # We only remove here if the version inside is different
-                    $version = (Get-ChildItem -Path $destinationPathToOutput\approot\packages$path)[0].ToString()
-                    if ($version -eq $item.Node.version) {
-                        $item.Node.ParentNode.RemoveChild($item.Node)
-                    }
-                }
-            }
-            Return $doc_approot_packages.OuterXml
-        } -ArgumentList $doc_approot_packages,$sourcePathToOutputPackages,$destinationPathToOutput
-        $doc_approot_packages2 = New-Object -TypeName XML
-        $doc_approot_packages2.LoadXml('<?xml version="1.0"?>' + $doc_approot_packages_Str.Substring($doc_approot_packages_Str.IndexOf('<')))
-        Write-Host OK
-        Write-Host
-        Write-Host Using package manifest copying packages
-        $counter = 0
-        Foreach ($item in (Select-XML -Xml $doc_approot_packages2 -XPath '//data')) {
-            CompressSendFolder -Source $item.Node.path -Session $Session -SourcePathToOutputSubfolder $sourcePathToOutputApproot
-            $counter += 1
-        }
-        if ($counter -gt 0) {
-            $updatepackages = $true
-        } else {
-            $updatepackages = $false
-        }
-        Write-Host OK
-        Write-Host
-        ###################################
-        #                                 #
-        # Deal with global.json           #
-        #                                 #
-        ###################################
-        $moveGlobalJsonFile = $false
-        if (Test-Path $sourcePathToOutputApproot\global.json) {
-            CompressSendFile -Source $sourcePathToOutputApproot\global.json -BaseName "global" -Extension ".json" -DeploymentFolder \ -Session $Session -SourcePathToOutputSubfolder $sourcePathToOutputApproot
-            $moveGlobalJsonFile = $true
-            Write-Host OK
-        }
-        Write-Host
-        ###################################
-        #                                 #
-        # Deal with web.cmd and web       #
-        #                                 #
-        ###################################
-        $moveWebCommand = $false
-        if (Test-Path $sourcePathToOutputApproot\web.cmd) {
-            CompressSendFile -Source $sourcePathToOutputApproot\web.cmd -BaseName "web" -Extension ".cmd" -DeploymentFolder \ -Session $Session -SourcePathToOutputSubfolder $sourcePathToOutputApproot
-            CompressSendFile -Source $sourcePathToOutputApproot\web -BaseName "web" -Extension "" -DeploymentFolder \ -Session $Session -SourcePathToOutputSubfolder $sourcePathToOutputApproot
-            $moveWebCommand = $true
-            Write-Host OK
-        }
-        Write-Host
+
         ###################################
         #                                 #
         # Deploy the payload              #
         #                                 #
         ###################################
-        Write-Host Deploy the new payload
-        Invoke-Command -Session $Session -ScriptBlock {
-            param($doc_wwwroot2,$sourcePathToOutputWwwroot,$websiteName,$destinationPathToOutput,$replaceRuntime,$moveGlobalJsonFile,$updateWwwrootItems,$updatepackages,$doc_approot_packages2,$sourcePathToOutputApproot,$moveWebCommand)
-            # Stop the AppPool
-            if((Get-WebAppPoolState $websiteName).Value -ne 'Stopped') {
-                Stop-WebAppPool -Name $websiteName
-                while((Get-WebAppPoolState $websiteName).Value -ne 'Stopped') {
-                    Start-Sleep -s 1
+        if ($updatePayloadItems) {
+            Write-Host Deploy the new payload
+            Invoke-Command -Session $Session -ScriptBlock {
+                param($doc_payload2,$sourcePathToOutput,$webAppPoolName,$destinationPathToOutput)
+                # Stop the AppPool
+                if((Get-WebAppPoolState $webAppPoolName).Value -ne 'Stopped') {
+                    Stop-WebAppPool -Name $webAppPoolName
+                    while((Get-WebAppPoolState $webAppPoolName).Value -ne 'Stopped') {
+                        Start-Sleep -s 1
+                    }
+                    Write-Host `-AppPool Stopped
                 }
-                Write-Host `-AppPool Stopped
-            }
-            # Handle wwwroot items
-            if ($updateWwwrootItems) {
-                Foreach ($item in (Select-XML -Xml $doc_wwwroot2 -XPath '//data')) {
-                    $path = $item.Node.path.SubString($sourcePathToOutputWwwroot.Length)
-                    if ($item.Node.isDirectory -eq "True" -and (!(Test-Path $destinationPathToOutput\wwwroot$path))) {
-                        New-Item $destinationPathToOutput\wwwroot$path -type directory -Force | Out-Null
-                        Write-Host `-Added folder $path into wwwroot
+                # Handle wwwroot items
+                if (!(Test-Path $destinationPathToOutput)) {
+                    New-Item $destinationPathToOutput -type directory -Force | Out-Null
+                }
+                Foreach ($item in (Select-XML -Xml $doc_payload2 -XPath '//data')) {
+                    $path = $item.Node.path.SubString($sourcePathToOutput.Length)
+                    if ($item.Node.isDirectory -eq "True" -and (!(Test-Path $destinationPathToOutput$path))) {
+                        New-Item $destinationPathToOutput$path -type directory -Force | Out-Null
+                        Write-Host `-Added folder $path
                     } elseif ($item.Node.isDirectory -eq "False") {
-                        Copy-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment\wwwroot_source$path -Destination $destinationPathToOutput\wwwroot$path
-                        Write-Host `-Copied file $path into wwwroot
+                        Copy-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment\payload_source$path -Destination $destinationPathToOutput$path
+                        Write-Host `-Copied file $path
                     }
                 }
-            }
-            # Runtime replacement
-            if ($replaceRuntime) {
-                Remove-Item $destinationPathToOutput\approot\runtimes -recurse -Force
-                Write-Host `-Cleared runtimes folder on the server
-                New-Item $destinationPathToOutput\approot\runtimes -type directory -Force | Out-Null
-                Write-Host `-Created runtimes folder
-                Copy-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment\runtimes\$runtime -Destination $destinationPathToOutput\approot\runtimes -Force -Recurse
-                Write-Host `-Copied $runtime into approot/runtimes
-            }
-            # global.json
-            if ($moveGlobalJsonFile) {
-                Copy-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment\global.json -Destination $destinationPathToOutput\approot -Force
-                Write-Host `-Copied global.json into approot
-            }
-            # web.cmd and web
-            if ($moveWebCommand) {
-                Copy-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment\web.cmd -Destination $destinationPathToOutput\approot -Force
-                Copy-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment\web -Destination $destinationPathToOutput\approot -Force
-                Write-Host `-Copied web.cmd and web into approot
-            }
-            # Packages
-            if ($updatepackages) {
-                if (!(Test-Path $destinationPathToOutput\approot\packages)) {
-                    New-Item $destinationPathToOutput\approot\packages -type directory -Force | Out-Null
-                }
-                Foreach ($item in (Select-XML -Xml $doc_approot_packages2 -XPath '//data')) {
-                    $path = $item.Node.path.SubString($sourcePathToOutputApproot.Length)
-                    if ((Test-Path $destinationPathToOutput\approot$path)) {
-                        Remove-Item $destinationPathToOutput\approot$path -Force -Recurse | Out-Null
+                # Restart the AppPool
+                if((Get-WebAppPoolState $webAppPoolName).Value -ne 'Started') {
+                    Start-WebAppPool -Name $webAppPoolName
+                    while((Get-WebAppPoolState $webAppPoolName).Value -ne 'Started') {
+                        Start-Sleep -s 1
                     }
-                    Copy-Item -Path $env:USERPROFILE\AppData\Local\Temp\deployment$path -Destination $destinationPathToOutput\approot$path -Recurse
-                    Remove-Item $env:USERPROFILE\AppData\Local\Temp\deployment$path -Force -Recurse | Out-Null
+                    Write-Host `-AppPool Started
                 }
-                Write-Host `-Set packages into approot/packages
-            }
-            # Restart the AppPool
-            if((Get-WebAppPoolState $websiteName).Value -ne 'Started') {
-                Start-WebAppPool -Name $websiteName
-                while((Get-WebAppPoolState $websiteName).Value -ne 'Started') {
-                    Start-Sleep -s 1
-                }
-                Write-Host `-AppPool Started
-            }
-        } -ArgumentList $doc_wwwroot2,$sourcePathToOutputWwwroot,$websiteName,$destinationPathToOutput,$replaceRuntime,$moveGlobalJsonFile,$updateWwwrootItems,$updatepackages,$doc_approot_packages2,$sourcePathToOutputApproot,$moveWebCommand
-        Write-Host OK
+            } -ArgumentList $doc_payload2,$sourcePathToOutput,$webAppPoolName,$destinationPathToOutput
+            Write-Host OK
+        } else {
+            Write-Host No payload changes were detected. The server payload is current. No deployment has been processed.
+        }
         Write-Host
         Write-Host Disconnecting and removing session
         Disconnect-PSSession -Session $Session | Out-Null
