@@ -17,7 +17,7 @@ The chunking algorithm for sending large files in a PSSession is adapted from "S
 
 For Azure Cloud Services, make sure the certificate for your cloud service is installed locally. For tips on doing this for Azure Cloud Services (Azure VM's), see the [TechThoughts blog post](http://techthoughts.info/remote-powershell-to-azure-vm-automating-certificate-configuration/).
 ### Configuration
-Provide the path to the output folder of your project, which is the folder that contains your `wwwroot`, `refs`, and any contents folders that you specified in `project.json`. You'll also see a number of DLL's and your application's executable (.exe), program database (.pdb), dependency (.dep), and DLL (.dll) files. For example, the path for a `dnxcore50 win7-x64` target platform, runtime, and payload would be in this format: `C:\My_Cool_Project\My_Project_Assets_Folder\bin\Release\dnxcore50\win7-x64`.
+Provide the path to the output folder of your project, which is the folder that contains your `wwwroot`, `refs`, and any contents folders that you specified in `project.json`. You'll also see a number of DLL's and your application's executable (.exe), program database (.pdb), dependency (.dep), and DLL (.dll) files. For example, the path for a `netcoreapp1.0 win10-x64` target platform, runtime, and payload would be in this format: `C:\My_Cool_Project\My_Project_Assets_Folder\bin\Release\netcoreapp1.0\win10-x64\publish`.
 ```
 $sourcePathToOutput = '<PATH_TO_LOCAL_PUBLISH_FOLDER>'
 ```
@@ -33,7 +33,7 @@ The sample (and the script itself) demonstrates using Azure Cloud Services and A
 
 In the Azure scenario, note that these ports have been mapped in the Azure portal for these VM's: e.g., 55000 -> 5986, 55001 -> 5986, 55002 -> 5986. Each server under a Cloud Service endpoint (mycloudservice.cloudapp.net) must have a single, dedicated endpoint setup this way in the Azure portal.
 
-Make sure that the path to the website folder in the script array is to the folder that holds the `wwwroot` folder on the server. Recall that binding a website to a ASP.NET Core app's phycial folder in IIS is different: In IIS, you bind the website directly to the `wwwroot` folder. The folder that the script needs is the folder **above** the `wwwroot` folder.
+Make sure that the path to the website folder in the script array is to the folder that holds the website deployment on the server.
 
 ##### Example
 Say we have two Azure Cloud Services (myeastusservice.cloudapp.net and mywestusservice.cloudapp.net), each with two VM's. Each of the two VM's have had a dedicated port mapped to 5986 for SSL PowerShell. The web application has the same name on each VM, and the physical path is pointed to a data drive (F:) in the same location. This is how the array should be setup for this example:
