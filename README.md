@@ -38,6 +38,8 @@ Make sure that the path to the website folder in the script array is to the fold
 ##### Example
 Say we have two Azure Cloud Services (myeastusservice.cloudapp.net and mywestusservice.cloudapp.net), each with two VM's. Each of the two VM's have had a dedicated port mapped to 5986 for SSL PowerShell. The web application has the same name on each VM, and the physical path is pointed to a data drive (F:) in the same location. This is how the array should be setup for this example:
 ```
+$sourcePathToOutput = 'C:\_APPLICATIONS\corporate_public\bin\Release\netcoreapp1.0\win10-x64\publish'
+
 $servers = @(
     ('myeastusservice.cloudapp.net',50000,'adminuser','corporate_public','F:\corporate_public'),
     ('myeastusservice.cloudapp.net',50001,'adminuser','corporate_public','F:\corporate_public'),
