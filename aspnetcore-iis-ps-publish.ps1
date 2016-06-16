@@ -25,7 +25,7 @@
 #>
 
 # Provide the path to your local project output folder. This is the folder that contains the payload to move
-# e.g., C:\My_Cool_Project\My_Project_Assets_Folder\bin\Release\dnxcore50\win7-x64
+# e.g., C:\My_Cool_Project\My_Project_Assets_Folder\bin\Release\netcoreapp1.0\win10-x64\publish
 $sourcePathToOutput = '<path to output folder of project to the platform and runtime>'
 
 # Provide servers: The Cloud Service endpoint, the server's port at that endpoint, the admin username, 
